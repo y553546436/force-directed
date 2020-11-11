@@ -6,10 +6,9 @@ let height = _height;
 let data = null;
 let data_file = './data/data.json';
 
-function initgraph(nodes,links){
-    let n=nodes.length;
-    let m=links.length;
+function initgraph(nodes,links,n,m){
     name2id={};
+    let inf=77777777;
     for(let i=0;i<n;i++){
         name2id[nodes[i].id] = i;
     }
@@ -37,6 +36,7 @@ function initgraph(nodes,links){
             }
     L=height/maxf;
     K=233;
+    params=[]
     for(let i=0;i<n;i++){
         params[i]=[]
         for(let j=i+1;j<n;j++){
@@ -46,16 +46,20 @@ function initgraph(nodes,links){
     return params;
 }
 function Kamada_Kawai(nodes, links){
-    params = initgraph(nodes,links);
+    let n=nodes.length;
+    let m=links.length;
+    params = initgraph(nodes,links,n,m);
     for(let i=0;i<n;i++){
         nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
         nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
     }
+    /*
     while(1){
         for(i=0;i<n;i++){
             
         }
     }
+    */
 }
 // 需要实现一个图布局算法，给出每个node的x,y属性
 function graph_layout_algorithm(nodes, links) {
