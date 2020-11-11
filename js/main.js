@@ -6,6 +6,57 @@ let height = _height;
 let data = null;
 let data_file = './data/data.json';
 
+function initgraph(nodes,links){
+    let n=nodes.length;
+    let m=links.length;
+    name2id={};
+    for(let i=0;i<n;i++){
+        name2id[nodes[i].id] = i;
+    }
+    let floyd = []
+    for(let i=0;i<n;i++){
+        floyd[i]=[];
+        for(j=0;j<n;j++)
+            floyd[i][j]=inf;
+    }
+    for(let i=0;i<m;i++){
+        links[i].from = name2id[links[i].source]
+        links[i].to = name2id[links[i].target]
+        floyd[links[i].from][links[i].to] = 1;
+        floyd[links[i].to][links[i].from] = 1;
+    }
+    maxf = 0;
+    for(let k=0;k<n;k++)
+        for(let i=0;i<n;i++)
+            for(let j=0;j<n;j++){
+                if(i!=j&&j!=k&&i!=k)
+                    floyd[i][j]=Math.min(floyd[i][j], floyd[i][k]+floyd[k][j]);
+                if(k==n-1&&i<j){
+                    maxf=Math.max(maxf,floyd[i][j]);
+                }
+            }
+    L=height/maxf;
+    K=233;
+    for(let i=0;i<n;i++){
+        params[i]=[]
+        for(let j=i+1;j<n;j++){
+            params[i][j]={'d':floyd[i][j],'k':K/floyd[i][j],'l':L*floyd[i][j]};
+        }
+    }
+    return params;
+}
+function Kamada_Kawai(nodes, links){
+    params = initgraph(nodes,links);
+    for(let i=0;i<n;i++){
+        nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
+        nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
+    }
+    while(1){
+        for(i=0;i<n;i++){
+            
+        }
+    }
+}
 // 需要实现一个图布局算法，给出每个node的x,y属性
 function graph_layout_algorithm(nodes, links) {
     // 算法开始时间
@@ -13,13 +64,15 @@ function graph_layout_algorithm(nodes, links) {
     begin = d.getTime()
 
     //这是一个随机布局，请在这一部分实现图布局算法
+    /*
     for (i in nodes) {
         for (k = 0; k < 10000; k++) {
             nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
             nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
         }
     }
-
+    */
+    Kamada_Kawai(nodes, links);
     // 算法结束时间
     d2 = new Date()
     end = d2.getTime()
@@ -27,7 +80,7 @@ function graph_layout_algorithm(nodes, links) {
     // 保存图布局结果和花费时间为json格式，并按提交方式中重命名，提交时请注释这一部分代码
     var content = JSON.stringify({"time": end-begin, "nodes": nodes, "links": links});
     var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    saveAs(blob, "save.json");
+    //saveAs(blob, "save.json");
 }
 
 function draw_graph() {
@@ -41,6 +94,8 @@ function draw_graph() {
     // links = [{"source": 毕业学校, "target": 任职学校, "weight": 人数}, ...]
     let links = data.links;
     let nodes = data.nodes;
+    //len(nodes)=256 len(links)=846
+    //console.log(links.length, nodes.length) 
 
     let nodes_dict = {};
     for (i in nodes) {
