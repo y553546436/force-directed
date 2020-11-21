@@ -44,6 +44,13 @@ function initgraph(nodes,links,n,m){
             params[i][j]={d:floyd[i][j],k:K/floyd[i][j],l:L*floyd[i][j]};
         }
     }
+    /*
+    for(let i=0;i<m;i++)
+        if(links[i].from != links[i].to){
+            params[links[i].from][links[i].to].k*=links[i].weight;
+            params[links[i].to][links[i].from].k*=links[i].weight;
+        }
+        */
     return params;
 }
 function E_x(m, nodes, params) {
@@ -137,7 +144,7 @@ function Kamada_Kawai(nodes, links){
                 k=i;
             }
         }
-        let eps=1e-5;
+        let eps=1e5;
         if(max_Delta<eps) break;
         while(Delta(k,nodes,params)>eps) {
             delta_x=deltax(k,nodes,params);
@@ -145,11 +152,72 @@ function Kamada_Kawai(nodes, links){
             nodes[k].x += delta_x;
             nodes[k].y += delta_y;
             loop_cnt++;
-            if(loop_cnt==10000) {
+            if(loop_cnt==-1) {
                 alert(k);
                 alert(Delta(k,nodes,params));
                 loop_cnt=0;
             }
+        }
+    }
+}
+let lambda1=1e-3,lambda2=1e-3,iters=300;
+function get_distance(a,b){
+    return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
+}
+function repulsive(nodes,i,j){
+    let dist = get_distance(nodes[i],nodes[j]);
+    let fs = lambda1 * Math.sqrt(nodes[i].weight * nodes[j].weight) / dist;
+    let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
+    return {x: fs*dx/(dist*dist), y: fs*dy/(dist*dist)}
+}
+function attractive(nodes,i,j,w){
+    let dist = get_distance(nodes[i],nodes[j]);
+    let fs = lambda2 * dist * dist / w;
+    let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
+    return {x: fs*dx/(dist*dist), y: fs*dy/(dist*dist)}
+}
+function FR(nodes, links){
+    let n=nodes.length;
+    let m=links.length;
+    name2id={};
+    for(let i=0;i<n;i++){
+        name2id[nodes[i].id] = i;
+    }
+    for(let i=0;i<m;i++){
+        links[i].from = name2id[links[i].source]
+        links[i].to = name2id[links[i].target]
+    }
+    for(let i=0;i<n;i++){
+        nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
+        nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
+    }
+    for(let it=1;it<=iters;it++){
+        console.log(it)
+        force=[]
+        for(let i=0;i<n;i++){
+            force[i]={x:0,y:0};
+            for(let j=0;j<n;j++){
+                if(i!=j){
+                    let fs = repulsive(nodes,i,j);
+                    force[i].x+=fs.x;
+                    force[i].y+=fs.y;
+                }
+            }
+        }
+        for(let e=0;e<m;e++){
+            let x = links[e].from;
+            let y = links[e].to;
+            if(x==y) continue;
+            let fs = attractive(nodes, x, y, links[e].weight);
+            force[x].x+=fs.x;
+            force[x].y+=fs.y;
+            force[y].x-=fs.x;
+            force[y].y-=fs.y;
+        }
+        for(let i=0;i<n;i++){
+            console.log(nodes[i].x,nodes[i].y,force[i].x,force[i].y);
+            nodes[i].x += force[i].x;
+            nodes[i].y += force[i].y;
         }
     }
 }
@@ -168,7 +236,8 @@ function graph_layout_algorithm(nodes, links) {
         }
     }
     */
-    Kamada_Kawai(nodes, links);
+    //Kamada_Kawai(nodes, links);
+    FR(nodes,links);
     // 算法结束时间
     d2 = new Date()
     end = d2.getTime()
@@ -178,7 +247,20 @@ function graph_layout_algorithm(nodes, links) {
     var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     //saveAs(blob, "save.json");
 }
+let nodes_dict = {};
 
+var drag = d3.drag()
+        .on('drag', function (e, d) {
+            d3.select(this).attr("cx", d.x = e.x ).attr("cy", d.y = e.y );
+            d3.selectAll('line')
+                .attr("x1", d => nodes_dict[d.source].x)
+                .attr("y1", d => nodes_dict[d.source].y)
+                .attr("x2", d => nodes_dict[d.target].x)
+                .attr("y2", d => nodes_dict[d.target].y);
+            d3.selectAll('text')
+                .attr("x", d => d.x)
+                .attr("y", d => d.y)
+        });
 function draw_graph() {
     let svg = d3.select('#container')
         .select('svg')
@@ -189,18 +271,27 @@ function draw_graph() {
     // nodes = [{"id": 学校名称, "weight": 毕业学生数量}, ...]
     // links = [{"source": 毕业学校, "target": 任职学校, "weight": 人数}, ...]
     let links = data.links;
-    links = [{"source": "a", "target": "b", "weight": 100},{"source": "f", "target": "c", "weight": 100},{"source": "c", "target": "d", "weight": 100},{"source": "f", "target": "d", "weight": 100},{"source": "d", "target": "b", "weight": 100},{"source": "e", "target": "b", "weight": 100},{"source": "a", "target": "e", "weight": 100}];
-    console.log(links);
     let nodes = data.nodes;
-    nodes = [{"id": "a", "weight": 200}, {"id": "b", "weight": 300},{"id": "c", "weight": 200},{"id": "d", "weight": 300},{"id": "e", "weight": 200},{"id": "f", "weight": 200}];
-    console.log(nodes);
     //len(nodes)=256 len(links)=846
-    //console.log(links.length, nodes.length)
+    //console.log(links.length, nodes.length) 
+    // 图布局算法
+    graph_layout_algorithm(nodes, links);
 
-    let nodes_dict = {};
+    let haslinks = []
+    for(let i in nodes){
+        haslinks[i]=[];
+        for(let j in nodes)
+            haslinks[i][j]=0;
+    }
+    for(let i in links){
+        haslinks[links[i].from][links[i].to] = 1;
+        haslinks[links[i].to][links[i].from] = 1;
+    }
     for (i in nodes) {
         nodes_dict[nodes[i].id] = nodes[i]
     }
+
+    let clicking = false;
 
     // links
     let link = svg.append("g")
@@ -211,6 +302,10 @@ function draw_graph() {
         .join("line")
         .attr("stroke-width", d => Math.sqrt(d.weight));
 
+    let bgcolor = d3.color("rgba(240, 240, 240, 0.9)");
+    let ndcolor = d3.rgb(254,67,101);
+    let compute = d3.interpolate(bgcolor,ndcolor);
+    let lndcolor = compute(0.2);
     // nodes
     let node = svg.append("g")
         .attr("stroke", "#fff")
@@ -219,7 +314,7 @@ function draw_graph() {
         .data(nodes)
         .join("circle")
         .attr("r", d => Math.sqrt(d.weight) * 2 + 0.5)
-        .attr("fill", "steelblue")
+        .attr("fill", ndcolor)
         .on("mouseover", function (e, d) {// 鼠标移动到node上时显示text
             text
                 .attr("display", function (f) {
@@ -241,7 +336,38 @@ function draw_graph() {
                         return 'none';
                     }
                 })
-        });
+        })
+        .on("click", function (e, d){
+            clicking = true;
+            d3.selectAll("circle").attr("fill", (d2) =>{
+                if(d==d2||haslinks[name2id[d.id]][name2id[d2.id]]) return ndcolor;
+                else return lndcolor;
+            });
+            d3.selectAll("line").style("visibility", (d2)=>{
+                if(d2.source == d.id || d2.target == d.id) return "visible";
+                else return "hidden";
+            });
+            text
+                .attr("display", function(f){
+                    if(f.id==d.id||haslinks[name2id[d.id]][name2id[f.id]]) return "null";
+                    else return "none";
+                })
+        })
+        .on("dblclick", function(e,d){
+            clicking = false;
+            d3.selectAll("circle").attr("fill", ndcolor);
+            d3.selectAll("line").style("visibility", "visible");
+            text
+                .attr("display", function (f) {
+                    if (f.weight > 40) {
+                        return 'null';
+                    }
+                    else {
+                        return 'none';
+                    }
+                })
+        })
+        .call(drag);
 
     // 学校名称text，只显示满足条件的学校
     let text = svg.append("g")
@@ -257,9 +383,6 @@ function draw_graph() {
                 return 'none';
             }
         });
-
-    // 图布局算法
-    graph_layout_algorithm(nodes, links)
 
     // 绘制links, nodes和text的位置
     link
