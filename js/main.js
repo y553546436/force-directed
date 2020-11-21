@@ -127,6 +127,7 @@ function Kamada_Kawai(nodes, links){
         nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
     }
 
+    let loop_cnt=0;
     while(1){
         let max_Delta=0,k=0;
         for(i=0;i<n;i++){
@@ -136,13 +137,19 @@ function Kamada_Kawai(nodes, links){
                 k=i;
             }
         }
-        let eps=1e-4;
+        let eps=1e-5;
         if(max_Delta<eps) break;
         while(Delta(k,nodes,params)>eps) {
             delta_x=deltax(k,nodes,params);
             delta_y=deltay(k,nodes,params);
             nodes[k].x += delta_x;
             nodes[k].y += delta_y;
+            loop_cnt++;
+            if(loop_cnt==10000) {
+                alert(k);
+                alert(Delta(k,nodes,params));
+                loop_cnt=0;
+            }
         }
     }
 }
@@ -182,7 +189,11 @@ function draw_graph() {
     // nodes = [{"id": 学校名称, "weight": 毕业学生数量}, ...]
     // links = [{"source": 毕业学校, "target": 任职学校, "weight": 人数}, ...]
     let links = data.links;
+    links = [{"source": "a", "target": "b", "weight": 100},{"source": "f", "target": "c", "weight": 100},{"source": "c", "target": "d", "weight": 100},{"source": "f", "target": "d", "weight": 100},{"source": "d", "target": "b", "weight": 100},{"source": "e", "target": "b", "weight": 100},{"source": "a", "target": "e", "weight": 100}];
+    console.log(links);
     let nodes = data.nodes;
+    nodes = [{"id": "a", "weight": 200}, {"id": "b", "weight": 300},{"id": "c", "weight": 200},{"id": "d", "weight": 300},{"id": "e", "weight": 200},{"id": "f", "weight": 200}];
+    console.log(nodes);
     //len(nodes)=256 len(links)=846
     //console.log(links.length, nodes.length)
 
