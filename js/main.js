@@ -39,11 +39,84 @@ function initgraph(nodes,links,n,m){
     params=[]
     for(let i=0;i<n;i++){
         params[i]=[]
-        for(let j=i+1;j<n;j++){
-            params[i][j]={'d':floyd[i][j],'k':K/floyd[i][j],'l':L*floyd[i][j]};
+        for(let j=0;j<n;j++){
+            if(i!=j)
+            params[i][j]={d:floyd[i][j],k:K/floyd[i][j],l:L*floyd[i][j]};
         }
     }
     return params;
+}
+function E_x(m, nodes, params) {
+    let res = 0;
+    let n=nodes.length;
+    for(let i=0;i<n;i++)
+        if(i!=m) {
+            let k = nodes[m].x-nodes[i].x;
+            let tmp=Math.sqrt(Math.pow(nodes[m].x-nodes[i].x,2)+Math.pow(nodes[m].y-nodes[i].y,2));
+            k -= params[m][i].l*(nodes[m].x-nodes[i].x)/tmp;
+            res += params[m][i].k*k;
+        }
+    return res;
+}
+function E_y(m, nodes, params) {
+    let res = 0;
+    let n=nodes.length;
+    for(let i=0;i<n;i++)
+        if(i!=m) {
+            let k = nodes[m].y-nodes[i].y;
+            let tmp=Math.sqrt(Math.pow(nodes[m].x-nodes[i].x,2)+Math.pow(nodes[m].y-nodes[i].y,2));
+            k -= params[m][i].l*(nodes[m].y-nodes[i].y)/tmp;
+            res += params[m][i].k*k;
+        }
+    return res;
+}
+function Delta(m, nodes, params) {
+    return Math.sqrt(Math.pow(E_x(m,nodes,params),2)+Math.pow(E_y(m,nodes,params),2));
+}
+function E_xx(m,nodes,params) {
+    let res = 0;
+    let n=nodes.length;
+    for(let i=0;i<n;i++)
+        if(i!=m) {
+            let k=1;
+            let tmp=Math.pow(Math.pow(nodes[m].x-nodes[i].x,2)+Math.pow(nodes[m].y-nodes[i].y,2),1.5);
+            k-=params[m][i].l*Math.pow(nodes[m].y-nodes[i].y,2)/tmp;
+            res += params[m][i].k*k;
+        }
+    return res;
+}
+function E_xy(m,nodes,params) {
+    let res = 0;
+    let n=nodes.length;
+    for(let i=0;i<n;i++)
+        if(i!=m) {
+            let k=0;
+            let tmp=Math.pow(Math.pow(nodes[m].x-nodes[i].x,2)+Math.pow(nodes[m].y-nodes[i].y,2),1.5);
+            k+=params[m][i].l*(nodes[m].y-nodes[i].y)*(nodes[m].x-nodes[i].x)/tmp;
+            res += params[m][i].k*k;
+        }
+    return res;
+}
+function E_yx(m,nodes,params) {
+    return E_xy(m,nodes,params);
+}
+function E_yy(m,nodes,params) {
+    let res = 0;
+    let n=nodes.length;
+    for(let i=0;i<n;i++)
+        if(i!=m) {
+            let k=1;
+            let tmp=Math.pow(Math.pow(nodes[m].x-nodes[i].x,2)+Math.pow(nodes[m].y-nodes[i].y,2),1.5);
+            k-=params[m][i].l*Math.pow(nodes[m].x-nodes[i].x,2)/tmp;
+            res += params[m][i].k*k;
+        }
+    return res;
+}
+function deltax(m,nodes,params) {
+    return (E_y(m,nodes,params)*E_xy(m,nodes,params)-E_x(m,nodes,params)*E_yy(m,nodes,params))/(E_xx(m,nodes,params)*E_yy(m,nodes,params)-E_yx(m,nodes,params)*E_xy(m,nodes,params));
+}
+function deltay(m,nodes,params) {
+    return (E_y(m,nodes,params)*E_xx(m,nodes,params)-E_x(m,nodes,params)*E_yx(m,nodes,params))/(E_xy(m,nodes,params)*E_yx(m,nodes,params)-E_yy(m,nodes,params)*E_xx(m,nodes,params));
 }
 function Kamada_Kawai(nodes, links){
     let n=nodes.length;
@@ -53,13 +126,25 @@ function Kamada_Kawai(nodes, links){
         nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
         nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
     }
-    /*
+
     while(1){
+        let max_Delta=0,k=0;
         for(i=0;i<n;i++){
-            
+            let Deltai=Delta(i,nodes,params);
+            if(Deltai>max_Delta) {
+                max_Delta=Deltai;
+                k=i;
+            }
+        }
+        let eps=1e-4;
+        if(max_Delta<eps) break;
+        while(Delta(k,nodes,params)>eps) {
+            delta_x=deltax(k,nodes,params);
+            delta_y=deltay(k,nodes,params);
+            nodes[k].x += delta_x;
+            nodes[k].y += delta_y;
         }
     }
-    */
 }
 // 需要实现一个图布局算法，给出每个node的x,y属性
 function graph_layout_algorithm(nodes, links) {
@@ -99,7 +184,7 @@ function draw_graph() {
     let links = data.links;
     let nodes = data.nodes;
     //len(nodes)=256 len(links)=846
-    //console.log(links.length, nodes.length) 
+    //console.log(links.length, nodes.length)
 
     let nodes_dict = {};
     for (i in nodes) {
