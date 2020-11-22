@@ -38,3 +38,97 @@ html,body {
     background-color: rgba(240, 240, 240, 0.9);
     overflow: hidden;
 }
+
+#legend1 {
+    position: absolute;
+    left: 1250px;
+    top: 50px;
+    width:  15px;
+    height: 15px;
+    background-color: rgb(247, 68, 97);
+}
+
+#legend2 {
+    position: absolute;
+    left: 1250px;
+    top: 80px;
+    width:  15px;
+    height: 15px;
+    background-color: rgb(173,195,192);
+}
+
+#legend3 {
+    position: absolute;
+    left: 1250px;
+    top: 110px;
+    width:  15px;
+    height: 15px;
+    background-color: rgb(87,96,105);
+}
+
+#text1 {
+    position: absolute;
+    left: 1270px;
+    top: 48px;
+    width:  150px;
+    height: 15px;
+}
+
+#text2 {
+    position: absolute;
+    left: 1270px;
+    top: 78px;
+    width:  150px;
+    height: 15px;
+}
+
+#text3 {
+    position: absolute;
+    left: 1270px;
+    top: 108px;
+    width:  150px;
+    height: 15px;
+}
+
+#repr {
+    position: absolute;
+    left: 1250px;
+    top: 200px;
+}
+
+#attr {
+    position: absolute;
+    left: 1250px;
+    top: 250px;
+}
+
+#iter {
+    position: absolute;
+    left: 1250px;
+    top: 300px;
+}
+
+#bartext1{
+    position: absolute;
+    left: 1250px;
+    top: 180px;
+}
+
+#bartext2{
+    position: absolute;
+    left: 1250px;
+    top: 230px;
+}
+
+#bartext3{
+    position: absolute;
+    left: 1250px;
+    top: 280px;
+}
+
+#readme{
+    position: absolute;
+    font-size: 15px;
+    left: 1250px;
+    top: 350px;
+}

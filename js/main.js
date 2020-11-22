@@ -160,23 +160,35 @@ function Kamada_Kawai(nodes, links){
         }
     }
 }
-let lambda1=1e-5,lambda2=1e-5,lambda3=1,iters=500;
+
+let raw_l1=2,raw_l2=1e-6,raw_iters=500;
+let lambda1=2,lambda2=1e-6,lambda3=0,iters=500;
+
 function get_distance(a,b){
     return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
 }
+
 function repulsive(nodes,i,j){
     let dist = get_distance(nodes[i],nodes[j]);
-    let fs = lambda1 * Math.sqrt(nodes[i].weight*nodes[j].weight) / dist;
+    let fs = -lambda1 * nodes[i].weight * nodes[j].weight/(dist);
+    //fs = clip(fs);
     let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
     return {x: fs*dx/dist, y: fs*dy/dist}
 }
+
 function attractive(nodes,i,j,w){
     let dist = get_distance(nodes[i],nodes[j]);
-    let yc = Math.sqrt(nodes[i].weight * nodes[j].weight);
-    let fs = lambda2 * w * (dist-yc);
+    //let len = lambda3 * nodes[i].weight * nodes[j].weight;
+    //let fs = lambda2 * (dist*dist/len - len*len/dist);
+    let fs = lambda2 * w * dist * dist;
+    if(nodes[i].weight<=3 && nodes[j].weight>15) fs *= 10;
+    if(nodes[j].weight<=3 && nodes[i].weight>15) fs *= 10;  
+    //fs = clip(fs);
     let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
     return {x: fs*dx/dist, y: fs*dy/dist}
 }
+
+
 function normalize(nodes) {
     n = nodes.length;
     let max_x=nodes[0].x,max_y=nodes[0].y,min_x=nodes[0].x,min_y=nodes[0].y;
@@ -187,20 +199,28 @@ function normalize(nodes) {
         min_y=Math.min(min_y,nodes[i].y);
     }
     for(let i=0;i<n;++i) {
-        nodes[i].x = (nodes[i].x-min_x)/(max_x-min_x)*0.8*width+0.1*width;
+        nodes[i].x = (nodes[i].x-min_x)/(max_x-min_x)*0.7*width+0.05*width;
         nodes[i].y = (nodes[i].y-min_y)/(max_y-min_y)*0.8*height+0.1*height;
     }
 }
+
 /*
 function boundforce(nodes,i) {
     let x=0,y=0;
-    if(nodes[i].x>0.9*width) x=nodes[i].x-0.9*width;
+    if(nodes[i].x>0.9*width) x=-(nodes[i].x-0.9*width);
     if(nodes[i].x<0.1*width) x=0.1*width-nodes[i].x;
-    if(nodes[i].y>0.9*height) y=nodes[i].y-0.9*height;
+    if(nodes[i].y>0.9*height) y=-(nodes[i].y-0.9*height);
     if(nodes[i].y<0.1*height) y=0.1*height-nodes[i].y;
     return {x : x*lambda3, y: y*lambda3};
 }
 */
+function clip(x){
+    return x;
+    x=Math.max(x, -1);
+    x=Math.min(x, 1);
+    return x;
+}
+
 function FR(nodes, links){
     let n=nodes.length;
     let m=links.length;
@@ -212,16 +232,15 @@ function FR(nodes, links){
         links[i].from = name2id[links[i].source]
         links[i].to = name2id[links[i].target]
     }
-    velocity=[]
     for(let i=0;i<n;i++){
         nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
         nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
-        velocity[i]={x:0,y:0}
     }
     let tmp=1;
     for(let it=1;it<=iters;it++){
-        console.log(it)
+        //console.log(it)
         force=[]
+        //tmp=0;
         for(let i=0;i<n;i++){
             force[i]={x:0,y:0};
             for(let j=0;j<n;j++){
@@ -229,9 +248,13 @@ function FR(nodes, links){
                     let fs = repulsive(nodes,i,j);
                     force[i].x+=fs.x;
                     force[i].y+=fs.y;
+                    //console.log(fs.x, fs.y)
+                    //tmp = Math.max(tmp, Math.max(Math.abs(fs.x),Math.abs(fs.y)))
                 }
             }
         }
+        //console.log('repulsive',tmp);
+        //tmp=0;
         for(let e=0;e<m;e++){
             let x = links[e].from;
             let y = links[e].to;
@@ -241,7 +264,9 @@ function FR(nodes, links){
             force[x].y+=fs.y;
             force[y].x-=fs.x;
             force[y].y-=fs.y;
+            tmp = Math.max(tmp, Math.max(Math.abs(fs.x),Math.abs(fs.y)))
         }
+        //console.log('attractive', tmp);
         /*
         for(let i=0;i<n;i++) {
             let fs = boundforce(nodes,i);
@@ -249,19 +274,28 @@ function FR(nodes, links){
             force[i].y+=fs.y;
         }
         */
-        for(let i=0;i<n;i++) {
-            velocity[i].x+=tmp*force[i].x/nodes[i].weight;
-            velocity[i].y+=tmp*force[i].y/nodes[i].weight;
-        }
+        cg =0;
         for(let i=0;i<n;i++){
-            console.log(nodes[i].x,nodes[i].y,force[i].x,force[i].y,velocity[i].x,velocity[i].y);
-            nodes[i].x += velocity[i].x;
-            nodes[i].y += velocity[i].y;
+            /*
+            let fs = boundforce(nodes, i);
+            force[i].x += fs.x;
+            force[i].y += fs.y;
+            */
+            cg = Math.max(cg, Math.max(force[i].x, force[i].y));
+            nodes[i].x += force[i].x;
+            nodes[i].y += force[i].y;
         }
+        //console.log(it, cg);
         //normalize(nodes);
         tmp*=0.9;
     }
     normalize(nodes);
+    for(i in nodes){
+        if(isNaN(nodes[i].x) || isNaN(nodes[i].y)){
+            console.logs("Crash");
+            redraw();
+        }
+    }
 }
 // 需要实现一个图布局算法，给出每个node的x,y属性
 function graph_layout_algorithm(nodes, links) {
@@ -290,7 +324,17 @@ function graph_layout_algorithm(nodes, links) {
     //saveAs(blob, "save.json");
 }
 let nodes_dict = {};
+let bgcolor = d3.color("rgba(240, 240, 240, 0.9)");
 
+let col1 = d3.rgb(247,68,97);
+let col3 = d3.rgb(87,96,105);
+let col2 = d3.rgb(173,195,192);
+
+function getc(w){
+    if(w>40) return col1;
+    else if(w>5) return col2;
+    else return col3;
+}
 var drag = d3.drag()
         .on('drag', function (e, d) {
             d3.select(this).attr("cx", d.x = e.x ).attr("cy", d.y = e.y );
@@ -333,6 +377,12 @@ function draw_graph() {
         nodes_dict[nodes[i].id] = nodes[i]
     }
 
+    for(i in nodes){
+        nodes[i].rawcolor=getc(nodes[i].weight);
+        let compute = d3.interpolate(bgcolor,nodes[i].rawcolor);
+        nodes[i].fcolor=compute(0.2);
+    }
+
     let clicking = false;
 
     // links
@@ -344,10 +394,6 @@ function draw_graph() {
         .join("line")
         .attr("stroke-width", d => Math.sqrt(d.weight));
 
-    let bgcolor = d3.color("rgba(240, 240, 240, 0.9)");
-    let ndcolor = d3.rgb(254,67,101);
-    let compute = d3.interpolate(bgcolor,ndcolor);
-    let lndcolor = compute(0.2);
     // nodes
     let node = svg.append("g")
         .attr("stroke", "#fff")
@@ -356,8 +402,9 @@ function draw_graph() {
         .data(nodes)
         .join("circle")
         .attr("r", d => Math.sqrt(d.weight) * 2 + 0.5)
-        .attr("fill", ndcolor)
+        .attr("fill", d=>d.rawcolor)
         .on("mouseover", function (e, d) {// 鼠标移动到node上时显示text
+            if(!clicking){
             text
                 .attr("display", function (f) {
                     if (f.id == d.id || f.weight > 40) {
@@ -367,8 +414,10 @@ function draw_graph() {
                         return "none";
                     }
                 })
+            }
         })
         .on("mouseout", function (e, d) {// 鼠标移出node后按条件判断是否显示text
+            if(!clicking){
             text
                 .attr("display", function (f) {
                     if (f.weight > 40) {
@@ -378,12 +427,13 @@ function draw_graph() {
                         return 'none';
                     }
                 })
+            }
         })
         .on("click", function (e, d){
             clicking = true;
             d3.selectAll("circle").attr("fill", (d2) =>{
-                if(d==d2||haslinks[name2id[d.id]][name2id[d2.id]]) return ndcolor;
-                else return lndcolor;
+                if(d==d2||haslinks[name2id[d.id]][name2id[d2.id]]) return d2.rawcolor;
+                else return d2.fcolor;
             });
             d3.selectAll("line").style("visibility", (d2)=>{
                 if(d2.source == d.id || d2.target == d.id) return "visible";
@@ -391,13 +441,13 @@ function draw_graph() {
             });
             text
                 .attr("display", function(f){
-                    if(f.id==d.id||haslinks[name2id[d.id]][name2id[f.id]]) return "null";
+                    if((f.id==d.id||haslinks[name2id[d.id]][name2id[f.id]])&&f.weight>5) return "null";
                     else return "none";
                 })
         })
         .on("dblclick", function(e,d){
             clicking = false;
-            d3.selectAll("circle").attr("fill", ndcolor);
+            d3.selectAll("circle").attr("fill", d=>d.rawcolor);
             d3.selectAll("line").style("visibility", "visible");
             text
                 .attr("display", function (f) {
@@ -439,6 +489,39 @@ function draw_graph() {
     text
         .attr("x", d => d.x)
         .attr("y", d => d.y)
+    
+}
+function redraw(){
+    d3.selectAll('svg > *').remove();
+    draw_graph();
+}
+
+function slidechangerep(){
+    v = document.getElementById('repr').value;
+    lambda1 = raw_l1 * v;
+    document.getElementById("bartext1").innerText="repulsive coefficient: " + v;
+
+    d3.selectAll('svg > *').remove();
+    draw_graph();
+}
+
+function slidechangeatt(){
+    v = document.getElementById('attr').value;
+    lambda2 = raw_l2 * v;
+    document.getElementById("bartext2").innerText="attractive coefficient: " + v;
+
+    d3.selectAll('svg > *').remove();
+    draw_graph();
+}
+
+function slidechangeite(){
+    v = document.getElementById('iter').value;
+    iters = v;
+    console.log(document.getElementById("bartext3").innerText)
+    document.getElementById("bartext3").innerText="iterations: " + v;
+
+    d3.selectAll('svg > *').remove();
+    draw_graph();
 }
 
 function main() {
