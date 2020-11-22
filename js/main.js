@@ -160,22 +160,47 @@ function Kamada_Kawai(nodes, links){
         }
     }
 }
-let lambda1=1e-3,lambda2=1e-3,iters=300;
+let lambda1=1e-5,lambda2=1e-5,lambda3=1,iters=500;
 function get_distance(a,b){
-    return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
+    return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
 }
 function repulsive(nodes,i,j){
     let dist = get_distance(nodes[i],nodes[j]);
-    let fs = lambda1 * Math.sqrt(nodes[i].weight * nodes[j].weight) / dist;
+    let fs = lambda1 * Math.sqrt(nodes[i].weight*nodes[j].weight) / dist;
     let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
-    return {x: fs*dx/(dist*dist), y: fs*dy/(dist*dist)}
+    return {x: fs*dx/dist, y: fs*dy/dist}
 }
 function attractive(nodes,i,j,w){
     let dist = get_distance(nodes[i],nodes[j]);
-    let fs = lambda2 * dist * dist / w;
+    let yc = Math.sqrt(nodes[i].weight * nodes[j].weight);
+    let fs = lambda2 * w * (dist-yc);
     let dy = nodes[j].y - nodes[i].y, dx = nodes[j].x -nodes[i].x;
-    return {x: fs*dx/(dist*dist), y: fs*dy/(dist*dist)}
+    return {x: fs*dx/dist, y: fs*dy/dist}
 }
+function normalize(nodes) {
+    n = nodes.length;
+    let max_x=nodes[0].x,max_y=nodes[0].y,min_x=nodes[0].x,min_y=nodes[0].y;
+    for(let i=1;i<n;++i) {
+        max_x=Math.max(max_x,nodes[i].x);
+        min_x=Math.min(min_x,nodes[i].x);
+        max_y=Math.max(max_y,nodes[i].y);
+        min_y=Math.min(min_y,nodes[i].y);
+    }
+    for(let i=0;i<n;++i) {
+        nodes[i].x = (nodes[i].x-min_x)/(max_x-min_x)*0.8*width+0.1*width;
+        nodes[i].y = (nodes[i].y-min_y)/(max_y-min_y)*0.8*height+0.1*height;
+    }
+}
+/*
+function boundforce(nodes,i) {
+    let x=0,y=0;
+    if(nodes[i].x>0.9*width) x=nodes[i].x-0.9*width;
+    if(nodes[i].x<0.1*width) x=0.1*width-nodes[i].x;
+    if(nodes[i].y>0.9*height) y=nodes[i].y-0.9*height;
+    if(nodes[i].y<0.1*height) y=0.1*height-nodes[i].y;
+    return {x : x*lambda3, y: y*lambda3};
+}
+*/
 function FR(nodes, links){
     let n=nodes.length;
     let m=links.length;
@@ -187,10 +212,13 @@ function FR(nodes, links){
         links[i].from = name2id[links[i].source]
         links[i].to = name2id[links[i].target]
     }
+    velocity=[]
     for(let i=0;i<n;i++){
         nodes[i].x = Math.random() * 0.8 * width + 0.1 * width;
         nodes[i].y = Math.random() * 0.8 * height + 0.1 * height;
+        velocity[i]={x:0,y:0}
     }
+    let tmp=1;
     for(let it=1;it<=iters;it++){
         console.log(it)
         force=[]
@@ -214,12 +242,26 @@ function FR(nodes, links){
             force[y].x-=fs.x;
             force[y].y-=fs.y;
         }
-        for(let i=0;i<n;i++){
-            console.log(nodes[i].x,nodes[i].y,force[i].x,force[i].y);
-            nodes[i].x += force[i].x;
-            nodes[i].y += force[i].y;
+        /*
+        for(let i=0;i<n;i++) {
+            let fs = boundforce(nodes,i);
+            force[i].x+=fs.x;
+            force[i].y+=fs.y;
         }
+        */
+        for(let i=0;i<n;i++) {
+            velocity[i].x+=tmp*force[i].x/nodes[i].weight;
+            velocity[i].y+=tmp*force[i].y/nodes[i].weight;
+        }
+        for(let i=0;i<n;i++){
+            console.log(nodes[i].x,nodes[i].y,force[i].x,force[i].y,velocity[i].x,velocity[i].y);
+            nodes[i].x += velocity[i].x;
+            nodes[i].y += velocity[i].y;
+        }
+        //normalize(nodes);
+        tmp*=0.9;
     }
+    normalize(nodes);
 }
 // 需要实现一个图布局算法，给出每个node的x,y属性
 function graph_layout_algorithm(nodes, links) {
@@ -273,7 +315,7 @@ function draw_graph() {
     let links = data.links;
     let nodes = data.nodes;
     //len(nodes)=256 len(links)=846
-    //console.log(links.length, nodes.length) 
+    //console.log(links.length, nodes.length)
     // 图布局算法
     graph_layout_algorithm(nodes, links);
 
